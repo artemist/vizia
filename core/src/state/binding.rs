@@ -1,10 +1,12 @@
 use std::any::TypeId;
 use std::collections::HashSet;
 
+use femtovg::LineCap;
 use morphorm::{LayoutType, PositionType};
 
 use crate::{
-    Color, Context, Display, Entity, Handle, LensExt, StateStore, TreeExt, Units, View, Visibility,
+    Color, Context, Display, Entity, Handle, LensExt, LinearGradient, StateStore, TreeExt, Units,
+    View, Visibility,
 };
 
 use crate::{Data, Lens};
@@ -236,6 +238,19 @@ impl Res<Units> for Units {
         F: 'static + Fn(&mut Context, Entity, Self),
     {
         (closure)(cx, entity, *self);
+    }
+}
+
+impl Res<LinearGradient> for LinearGradient {
+    fn get_val(&self, _: &Context) -> LinearGradient {
+        self.clone()
+    }
+
+    fn set_or_bind<F>(&self, cx: &mut Context, entity: Entity, closure: F)
+    where
+        F: 'static + Fn(&mut Context, Entity, Self),
+    {
+        (closure)(cx, entity, self.clone());
     }
 }
 

@@ -37,8 +37,8 @@ mod storage;
 
 mod style;
 pub use style::{
-    apply_transform, BorderCornerShape, Display, Overflow, PropSet, PseudoClass, Rule, Style,
-    Visibility,
+    apply_transform, BorderCornerShape, Display, GradientDirection, LinearGradient, Overflow,
+    PropSet, PseudoClass, Rule, Style, Visibility,
 };
 
 mod animation;

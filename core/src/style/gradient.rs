@@ -1,4 +1,5 @@
 use crate::Color;
+use crate::Data;
 use crate::Units;
 
 /// A stop in a gradient, defined by a position and a color
@@ -18,12 +19,10 @@ impl GradientStop {
 }
 
 /// The direction of a linear gadient.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Data)]
 pub enum GradientDirection {
     LeftToRight,
-    RightToLeft,
     TopToBottom,
-    BottomToTop,
 }
 
 impl Default for GradientDirection {
@@ -33,12 +32,12 @@ impl Default for GradientDirection {
 }
 
 /// Describes a linear gradient
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq, Data)]
 pub struct LinearGradient {
     // Direction of the gradient
     pub direction: GradientDirection,
     // Stops of the gradient
-    pub stops: Vec<GradientStop>,
+    pub stops: Vec<(f32, Color)>,
 }
 
 impl LinearGradient {
@@ -46,19 +45,13 @@ impl LinearGradient {
         Self { direction, stops: Vec::new() }
     }
 
-    pub fn add_stop(mut self, stop: GradientStop) -> Self {
+    pub fn with_stop(mut self, stop: (f32, Color)) -> Self {
         self.stops.push(stop);
 
         self
     }
 
-    pub fn get_stops(&self, _parent_length: f32) -> Vec<(f32, Color)> {
-        self.stops
-            .iter()
-            .map(|stop| {
-                //println!("Stop: {:?}", stop.position.value_or(parent_length, 0.0));
-                (stop.position.value_or(1.0, 0.0), stop.color)
-            })
-            .collect::<Vec<_>>()
+    pub fn get_stops(&self, _parent_length: f32) -> &Vec<(f32, Color)> {
+        &self.stops
     }
 }

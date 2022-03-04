@@ -220,21 +220,21 @@ pub trait View: 'static + Sized {
         let mut outer_shadow_color: femtovg::Color = outer_shadow_color.into();
         outer_shadow_color.set_alphaf(outer_shadow_color.a * opacity);
 
-        let _inner_shadow_h_offset =
+        let inner_shadow_h_offset =
             match cx.style.inner_shadow_h_offset.get(entity).cloned().unwrap_or_default() {
                 Units::Pixels(val) => val,
                 Units::Percentage(val) => bounds.w * (val / 100.0),
                 _ => 0.0,
             };
 
-        let _inner_shadow_v_offset =
+        let inner_shadow_v_offset =
             match cx.style.inner_shadow_v_offset.get(entity).cloned().unwrap_or_default() {
                 Units::Pixels(val) => val,
                 Units::Percentage(val) => bounds.w * (val / 100.0),
                 _ => 0.0,
             };
 
-        let _inner_shadow_blur =
+        let inner_shadow_blur =
             match cx.style.inner_shadow_blur.get(entity).cloned().unwrap_or_default() {
                 Units::Pixels(val) => val,
                 Units::Percentage(val) => bounds.w * (val / 100.0),
@@ -542,33 +542,33 @@ pub trait View: 'static + Sized {
         paint.set_line_width(border_width);
         canvas.stroke_path(&mut path, paint);
 
-        // // Draw inner shadow
-        // let mut path = Path::new();
-        // path.rounded_rect_varying(
-        //     0.0 + border_width,
-        //     0.0 + border_width,
-        //     bounds.w - border_width * 2.0,
-        //     bounds.h - border_width * 2.0,
-        //     border_radius_top_left,
-        //     border_radius_top_right,
-        //     border_radius_bottom_right,
-        //     border_radius_bottom_left,
-        // );
+        // Draw inner shadow
+        let mut path = Path::new();
+        path.rounded_rect_varying(
+            bounds.x + border_width,
+            bounds.y + border_width,
+            bounds.w - border_width * 2.0,
+            bounds.h - border_width * 2.0,
+            border_radius_top_left,
+            border_radius_top_right,
+            border_radius_bottom_right,
+            border_radius_bottom_left,
+        );
 
-        // let mut paint = Paint::box_gradient(
-        //     0.0 + inner_shadow_h_offset + border_width,
-        //     0.0 + inner_shadow_v_offset + border_width,
-        //     bounds.w - border_width * 2.0,
-        //     bounds.h - border_width * 2.0,
-        //     border_radius_top_left
-        //         .max(border_radius_top_right)
-        //         .max(border_radius_bottom_left)
-        //         .max(border_radius_bottom_right),
-        //     inner_shadow_blur,
-        //     femtovg::Color::rgba(0, 0, 0, 0),
-        //     inner_shadow_color,
-        // );
-        // canvas.fill_path(&mut path, paint);
+        let paint = Paint::box_gradient(
+            bounds.x + inner_shadow_h_offset + border_width,
+            bounds.y + inner_shadow_v_offset + border_width,
+            bounds.w - border_width * 2.0,
+            bounds.h - border_width * 2.0,
+            border_radius_top_left
+                .max(border_radius_top_right)
+                .max(border_radius_bottom_left)
+                .max(border_radius_bottom_right),
+            inner_shadow_blur,
+            femtovg::Color::rgba(0, 0, 0, 0),
+            inner_shadow_color,
+        );
+        canvas.fill_path(&mut path, paint);
 
         // Draw text and image
         if cx.style.text.get(entity).is_some() || cx.style.image.get(entity).is_some() {

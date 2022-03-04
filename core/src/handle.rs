@@ -3,8 +3,9 @@ use std::marker::PhantomData;
 use morphorm::{LayoutType, PositionType, Units};
 
 use crate::{
-    style::Overflow, Abilities, Binding, BorderCornerShape, Color, Context, CursorIcon, Data,
-    Display, Entity, Lens, PseudoClass, Res, Visibility,
+    style::{LinearGradient, Overflow},
+    Abilities, Binding, BorderCornerShape, Color, Context, CursorIcon, Data, Display, Entity, Lens,
+    PseudoClass, Res, Visibility,
 };
 
 macro_rules! set_style {
@@ -299,6 +300,7 @@ impl<'a, T> Handle<'a, T> {
 
     set_style!(background_color, Color);
     set_style!(background_image, String);
+    set_style!(background_gradient, LinearGradient);
 
     set_style!(layout_type, LayoutType);
     set_style!(position_type, PositionType);
