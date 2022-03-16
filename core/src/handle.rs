@@ -61,6 +61,13 @@ impl<'a, T> Handle<'a, T> {
         self
     }
 
+    pub fn id(self, id: &str) -> Self {
+        self.cx.style.ids.insert(self.entity, id.to_owned()).expect("Could not insert id");
+        self.cx.style.needs_restyle = true;
+
+        self
+    }
+
     pub fn cursor(self, cursor_icon: CursorIcon) -> Self {
         self.cx.style.cursor.insert(self.entity, cursor_icon);
 
@@ -220,6 +227,16 @@ impl<'a, T> Handle<'a, T> {
     pub fn hoverable(self, state: bool) -> Self {
         if let Some(abilities) = self.cx.style.abilities.get_mut(self.entity) {
             abilities.set(Abilities::HOVERABLE, state);
+        }
+
+        self.cx.style.needs_restyle = true;
+
+        self
+    }
+
+    pub fn focusable(self, state: bool) -> Self {
+        if let Some(abilities) = self.cx.style.abilities.get_mut(self.entity) {
+            abilities.set(Abilities::FOCUSABLE, state);
         }
 
         self.cx.style.needs_restyle = true;
