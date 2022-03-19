@@ -39,21 +39,17 @@ const STYLE: &str = r#"
 "#;
 
 fn main() {
-    let mut window_description = WindowDescription::new();
-    window_description.resizable = false;
+    let mut window_description = WindowDescription::new().with_inner_size(300, 300);
     Application::new(window_description, |cx| {
-        cx.add_theme(STYLE);
+        //cx.add_theme(STYLE);
 
         Entity::root().set_background_color(cx, Color::rgb(200, 200, 200));
 
-        Element::new(cx)
-            .size(Pixels(100.0))
-            .on_press(|cx| {
-                cx.current.set_active(cx, true);
-            })
-            .on_release(|cx| {
-                cx.current.set_active(cx, false);
-            });
+        Element::new(cx).size(Pixels(150.0)).background_color(Color::blue()).on_geo_changed(
+            |cx, geo| {
+                Label::new(cx, &format!("{}", cx.cache.get_width(cx.current)));
+            },
+        );
         // AppData { val: 0.5 }.build(cx);
 
         // HStack::new(cx, |cx| {
@@ -72,5 +68,6 @@ fn main() {
         // .col_between(Pixels(20.0))
         // .child_space(Pixels(20.0));
     })
+    .with_scale_policy(WindowScalePolicy::ScaleFactor(1.0))
     .run();
 }
