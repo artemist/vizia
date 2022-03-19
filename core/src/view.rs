@@ -702,7 +702,6 @@ pub trait View: 'static + Sized {
                 paint.set_font(&[font_id.clone()]);
                 paint.set_text_align(align);
                 paint.set_text_baseline(baseline);
-                paint.set_anti_alias(false);
 
                 canvas.fill_text(x, y, &text, paint).unwrap();
             }
