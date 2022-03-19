@@ -274,7 +274,8 @@ pub fn apply_text_constraints(cx: &mut Context, tree: &Tree) {
                     })
                     .unwrap_or(default_font);
 
-                let font_size = cx.style.font_size.get(entity).cloned().unwrap_or(16.0);
+                let font_size = cx.style.font_size.get(entity).cloned().unwrap_or(16.0)
+                    * cx.style.dpi_factor as f32;
 
                 let mut paint = Paint::default();
                 paint.set_font_size(font_size);

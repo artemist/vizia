@@ -82,7 +82,8 @@ impl TextboxData {
 
             let text_string = text.to_owned();
 
-            let font_size = cx.style.font_size.get(entity).cloned().unwrap_or(16.0);
+            let font_size = cx.style.font_size.get(entity).cloned().unwrap_or(16.0)
+                * cx.style.dpi_factor as f32;
 
             let mut paint = Paint::default();
             paint.set_font_size(font_size);
@@ -250,8 +251,11 @@ impl TextboxData {
                         self.selection_entity.set_left(cx, Pixels(selectx.floor() - posx - 1.0));
                     }
 
-                    self.selection_entity.set_width(cx, Pixels(select_width));
-                    self.selection_entity.set_height(cx, Pixels(font_metrics.height()));
+                    let scale_factor = cx.style.dpi_factor as f32;
+
+                    self.selection_entity.set_width(cx, Pixels(select_width / scale_factor));
+                    self.selection_entity
+                        .set_height(cx, Pixels(font_metrics.height() / scale_factor));
                     self.selection_entity.set_top(cx, Stretch(1.0));
                     self.selection_entity.set_bottom(cx, Stretch(1.0));
 
@@ -260,7 +264,7 @@ impl TextboxData {
                     self.caret_entity.set_left(cx, Pixels(caret_left));
                     self.caret_entity.set_top(cx, Stretch(1.0));
                     self.caret_entity.set_bottom(cx, Stretch(1.0));
-                    self.caret_entity.set_height(cx, Pixels(font_metrics.height()));
+                    self.caret_entity.set_height(cx, Pixels(font_metrics.height() / scale_factor));
                 }
             }
         }

@@ -65,11 +65,11 @@ impl Window {
         // Apply generic WindowBuilder properties
         window_builder = window_builder
             .with_title(&window_description.title)
-            .with_inner_size(PhysicalSize::new(
+            .with_inner_size(LogicalSize::new(
                 window_description.inner_size.width,
                 window_description.inner_size.height,
             ))
-            .with_min_inner_size(PhysicalSize::new(
+            .with_min_inner_size(LogicalSize::new(
                 window_description.min_inner_size.width,
                 window_description.min_inner_size.height,
             ))
@@ -118,9 +118,8 @@ impl Window {
         };
 
         // Set some initial properties on our result canvas
-        let dpi_factor = result.window().scale_factor();
         let size = result.window().inner_size();
-        result.canvas.set_size(size.width as u32, size.height as u32, dpi_factor as f32);
+        result.canvas.set_size(size.width as u32, size.height as u32, 1.0);
         result.canvas.clear_rect(
             0,
             0,
