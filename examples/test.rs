@@ -10,6 +10,6 @@ fn main() {
             Label::new(cx, "TEST").font_size(30.0);
         });
     })
-    .with_scale_policy(WindowScalePolicy::ScaleFactor(2.0))
+    //.with_scale_policy(WindowScalePolicy::ScaleFactor(2.0))
     .run();
 }
