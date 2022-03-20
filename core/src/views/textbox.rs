@@ -243,15 +243,17 @@ impl TextboxData {
                         }
                     }
 
+                    let scale_factor = cx.style.dpi_factor as f32;
+
                     //Draw selection
                     let select_width = (caretx - selectx).abs();
                     if selectx > caretx {
-                        self.selection_entity.set_left(cx, Pixels(caretx.floor() - posx - 1.0));
+                        self.selection_entity
+                            .set_left(cx, Pixels((caretx.floor() - posx - 1.0) / scale_factor));
                     } else if caretx > selectx {
-                        self.selection_entity.set_left(cx, Pixels(selectx.floor() - posx - 1.0));
+                        self.selection_entity
+                            .set_left(cx, Pixels((selectx.floor() - posx - 1.0) / scale_factor));
                     }
-
-                    let scale_factor = cx.style.dpi_factor as f32;
 
                     self.selection_entity.set_width(cx, Pixels(select_width / scale_factor));
                     self.selection_entity
@@ -261,7 +263,7 @@ impl TextboxData {
 
                     let caret_left = (caretx.floor() - posx - 1.0).max(0.0);
 
-                    self.caret_entity.set_left(cx, Pixels(caret_left));
+                    self.caret_entity.set_left(cx, Pixels(caret_left / scale_factor));
                     self.caret_entity.set_top(cx, Stretch(1.0));
                     self.caret_entity.set_bottom(cx, Stretch(1.0));
                     self.caret_entity.set_height(cx, Pixels(font_metrics.height() / scale_factor));
