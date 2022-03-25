@@ -239,7 +239,6 @@ impl Application {
                     // Rebuild application if required
                     if context.enviroment.needs_rebuild {
                         context.current = Entity::root();
-                        context.count = 0;
                         if let Some(builder) = &builder {
                             (builder)(&mut context);
                         }
@@ -315,7 +314,6 @@ impl Application {
 
                     if let Some(idle_callback) = &on_idle {
                         context.current = Entity::root();
-                        context.count = 0;
                         (idle_callback)(&mut context);
                     }
 
