@@ -1,9 +1,11 @@
-use femtovg::{Align, Baseline, Paint};
+use femtovg::{Align, Baseline};
 use morphorm::Units;
 
 use crate::{
+    measure_text_lines,
     style::{Overflow, Selector, SelectorRelation},
-    BoundingBox, Context, Display, Entity, FontOrId, PseudoClass, Rule, Tree, TreeExt, Visibility,
+    text_layout, text_paint, BoundingBox, Context, Display, Entity, PseudoClass, Rule, Tree,
+    TreeExt, Visibility,
 };
 
 pub fn apply_z_ordering(cx: &mut Context, tree: &Tree) {
@@ -41,22 +43,12 @@ pub fn apply_clipping(cx: &mut Context, tree: &Tree) {
         let parent = tree.get_layout_parent(entity).unwrap();
 
         let parent_clip_region = cx.cache.get_clip_region(parent);
-        //let parent_border_width = cx.style.border_width.get(parent).cloned().unwrap_or_default().value_or(0.0, 0.0);
-
-        //println!("Parent border width: {}", parent_border_width);
-        // parent_clip_region.x;
-        // parent_clip_region.y;
-        // parent_clip_region.w;
-        // parent_clip_region.h;
-
-        let root_clip_region = cx.cache.get_clip_region(Entity::root());
 
         let overflow = cx.style.overflow.get(entity).cloned().unwrap_or_default();
 
-        if overflow == Overflow::Hidden {
+        let clip_region = if overflow == Overflow::Hidden {
             let clip_widget = cx.style.clip_widget.get(entity).cloned().unwrap_or(entity);
-            //if let Some(clip_widget) = cx.style.clip_widget.get(entity).cloned() {
-            //let clip_widget_border_width = cx.style.border_width.get(clip_widget).cloned().unwrap_or_default().value_or(0.0, 0.0);
+
             let clip_x = cx.cache.get_posx(clip_widget);
             let clip_y = cx.cache.get_posy(clip_widget);
             let clip_w = cx.cache.get_width(clip_widget);
@@ -78,16 +70,20 @@ pub fn apply_clipping(cx: &mut Context, tree: &Tree) {
                 parent_clip_region.y + parent_clip_region.h - intersection.y
             };
 
-            cx.cache.set_clip_region(entity, intersection);
-            //} else {
-            //    cx.cache.set_clip_region(entity, parent_clip_region);
-            //}
-        } else {
-            cx.cache.set_clip_region(entity, root_clip_region);
-        }
+            intersection.w = intersection.w.max(0.0);
+            intersection.h = intersection.h.max(0.0);
 
-        //let clip_region = cx.cache.get_clip_region(entity);
-        //println!("Entity: {}  Clip Region: {:?}", entity, clip_region);
+            intersection
+        } else {
+            parent_clip_region
+        };
+
+        // Absolute positioned nodes ignore overflow hidden
+        //if position_type == PositionType::SelfDirected {
+        //    cx.cache.set_clip_region(entity, root_clip_region);
+        //} else {
+        cx.cache.set_clip_region(entity, clip_region);
+        //}
     }
 }
 
@@ -192,16 +188,21 @@ pub fn apply_text_constraints(cx: &mut Context, tree: &Tree) {
             let mut y = cx.cache.get_posy(entity);
             let width = cx.cache.get_width(entity);
             let height = cx.cache.get_height(entity);
+            let mut child_space_x = 0.0;
+            let mut child_space_y = 0.0;
 
             let align = match child_left {
-                Units::Pixels(val) => match child_right {
-                    Units::Stretch(_) => {
-                        x += val + border_width;
-                        Align::Left
-                    }
+                Units::Pixels(val) => {
+                    child_space_x += val;
+                    match child_right {
+                        Units::Stretch(_) => {
+                            x += val + border_width;
+                            Align::Left
+                        }
 
-                    _ => Align::Left,
-                },
+                        _ => Align::Left,
+                    }
+                }
 
                 Units::Stretch(_) => match child_right {
                     Units::Pixels(val) => {
@@ -219,16 +220,23 @@ pub fn apply_text_constraints(cx: &mut Context, tree: &Tree) {
 
                 _ => Align::Left,
             };
+            match child_right {
+                Units::Pixels(px) => child_space_x += px,
+                _ => {}
+            }
 
             let baseline = match child_top {
-                Units::Pixels(val) => match child_bottom {
-                    Units::Stretch(_) => {
-                        y += val + border_width;
-                        Baseline::Top
-                    }
+                Units::Pixels(val) => {
+                    child_space_y += val;
+                    match child_bottom {
+                        Units::Stretch(_) => {
+                            y += val + border_width;
+                            Baseline::Top
+                        }
 
-                    _ => Baseline::Top,
-                },
+                        _ => Baseline::Top,
+                    }
+                }
 
                 Units::Stretch(_) => match child_bottom {
                     Units::Pixels(val) => {
@@ -246,52 +254,34 @@ pub fn apply_text_constraints(cx: &mut Context, tree: &Tree) {
 
                 _ => Baseline::Top,
             };
+            match child_bottom {
+                Units::Pixels(px) => child_space_y += px,
+                _ => {}
+            }
 
             let mut content_width = 0.0;
             let mut content_height = 0.0;
 
             if let Some(text) = cx.style.text.get(entity) {
-                let font = cx.style.font.get(entity).cloned().unwrap_or_default();
-
-                // TODO - This should probably be cached in cx to save look-up time
-                let default_font = cx
-                    .resource_manager
-                    .fonts
-                    .get(&cx.style.default_font)
-                    .and_then(|font| match font {
-                        FontOrId::Id(id) => Some(id),
-                        _ => None,
-                    })
-                    .expect("Failed to find default font");
-
-                let font_id = cx
-                    .resource_manager
-                    .fonts
-                    .get(&font)
-                    .and_then(|font| match font {
-                        FontOrId::Id(id) => Some(id),
-                        _ => None,
-                    })
-                    .unwrap_or(default_font);
-
-                let font_size = cx.style.font_size.get(entity).cloned().unwrap_or(16.0)
-                    * cx.style.dpi_factor as f32;
-
-                let mut paint = Paint::default();
-                paint.set_font_size(font_size);
-                paint.set_font(&[font_id.clone()]);
-
-                // TODO - should auto size use text height or font height?
-                let font_metrics =
-                    cx.text_context.measure_font(paint).expect("Failed to read font metrics");
-
+                let mut paint = text_paint(&cx.style, &cx.resource_manager, entity);
                 paint.set_text_align(align);
                 paint.set_text_baseline(baseline);
 
-                if let Ok(text_metrics) = cx.text_context.measure_text(x, y, text, paint) {
+                let font_metrics =
+                    cx.text_context.measure_font(paint).expect("Failed to read font metrics");
+
+                if let Ok(lines) = text_layout(f32::MAX, text, paint, &cx.text_context) {
+                    let metrics = measure_text_lines(text, paint, &lines, x, y, &cx.text_context);
+                    let text_width = metrics
+                        .iter()
+                        .map(|m| m.width())
+                        .reduce(|a, b| a.max(b))
+                        .unwrap_or_default();
+                    let text_height = font_metrics.height().round() * metrics.len() as f32;
+
                     // Add an extra pixel to account for AA
-                    let text_width = text_metrics.width().round() + 1.0;
-                    let text_height = font_metrics.height().round() + 1.0;
+                    let text_width = text_width.round() + 1.0 + child_space_x;
+                    let text_height = text_height.round() + 1.0 + child_space_y;
 
                     if content_width < text_width {
                         content_width = text_width;
@@ -690,10 +680,24 @@ pub fn apply_styles(cx: &mut Context, tree: &Tree) {
         if cx.style.font_size.link(entity, &matched_rules) {
             //println!("44");
             should_redraw = true;
+            should_relayout = true;
         }
 
         if cx.style.font.link(entity, &matched_rules) {
             //println!("44");
+            should_redraw = true;
+        }
+
+        if cx.style.text_wrap.link(entity, &matched_rules) {
+            should_redraw = true;
+            should_relayout = true;
+        }
+
+        if cx.style.selection_color.link(entity, &matched_rules) {
+            should_redraw = true;
+        }
+
+        if cx.style.caret_color.link(entity, &matched_rules) {
             should_redraw = true;
         }
 

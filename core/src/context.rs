@@ -574,7 +574,17 @@ impl Context {
         if self.style.needs_relayout {
             apply_text_constraints(self, &tree);
 
-            apply_layout(&mut self.cache, &self.tree, &self.style);
+            // hack!
+            let mut store = (Style::default(), TextContext::default(), ResourceManager::default());
+            std::mem::swap(&mut store.0, &mut self.style);
+            std::mem::swap(&mut store.1, &mut self.text_context);
+            std::mem::swap(&mut store.2, &mut self.resource_manager);
+
+            apply_layout(&mut self.cache, &self.tree, &store);
+            std::mem::swap(&mut store.0, &mut self.style);
+            std::mem::swap(&mut store.1, &mut self.text_context);
+            std::mem::swap(&mut store.2, &mut self.resource_manager);
+
             self.style.needs_relayout = false;
         }
 
@@ -622,6 +632,13 @@ impl Context {
         for entity in draw_tree.into_iter() {
             // Apply clipping
             let clip_region = self.cache.get_clip_region(entity);
+
+            // Skips drawing views with zero-sized clip regions
+            // This skips calling the `draw` method of the view
+            if clip_region.height() == 0.0 || clip_region.width() == 0.0 {
+                continue;
+            }
+
             canvas.scissor(clip_region.x, clip_region.y, clip_region.w, clip_region.h);
 
             // Apply transform
@@ -722,14 +739,17 @@ impl Context {
                     MouseButton::Left => {
                         self.mouse.left.pos_up = (self.mouse.cursorx, self.mouse.cursory);
                         self.mouse.left.released = self.hovered;
+                        self.mouse.left.state = MouseButtonState::Released;
                     }
                     MouseButton::Right => {
                         self.mouse.right.pos_up = (self.mouse.cursorx, self.mouse.cursory);
                         self.mouse.right.released = self.hovered;
+                        self.mouse.right.state = MouseButtonState::Released;
                     }
                     MouseButton::Middle => {
                         self.mouse.middle.pos_up = (self.mouse.cursorx, self.mouse.cursory);
                         self.mouse.middle.released = self.hovered;
+                        self.mouse.middle.state = MouseButtonState::Released;
                     }
                     _ => {}
                 }

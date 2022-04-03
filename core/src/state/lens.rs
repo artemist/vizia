@@ -5,34 +5,6 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::rc::Rc;
 
-pub struct DerefContainer<T>(T);
-
-impl<T> Deref for DerefContainer<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> AsRef<T> for DerefContainer<T> {
-    fn as_ref(&self) -> &T {
-        &self.0
-    }
-}
-
-impl<T> DerefContainer<T> {
-    pub fn take(self) -> T {
-        self.0
-    }
-}
-
-impl<T: std::fmt::Debug> std::fmt::Debug for DerefContainer<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
 /// A Lens allows the construction of a reference to a piece of some data, e.g. a field of a struct.
 ///
 /// When deriving the `Lens` trait on a struct, the derive macro constructs a static type which implements the `Lens` trait for each field.
@@ -59,36 +31,32 @@ impl<T: Lens> LensCache for T {}
 
 /// Helpers for constructing more complex `Lens`es.
 pub trait LensExt: Lens {
-    /// Retrieve a `DerefContainer` to the lensed data from context.
-    ///
-    /// The value can be retrieved by de-referencing the container.  
+    /// Retrieve a copy of the lensed data from context.
     ///
     /// Example
     /// ```ignore
     /// let value = lens.get(cx);
     /// ```
-    fn get(&self, cx: &Context) -> DerefContainer<Self::Target>
+    fn get(&self, cx: &Context) -> Self::Target
     where
         Self::Target: Clone,
     {
         self.view(
             cx.data().expect("Failed to get data from context. Has it been built into the tree?"),
             |t| {
-                DerefContainer(
-                    t.expect("Lens failed to resolve. Do you want to use LensExt::get_fallible?")
-                        .clone(),
-                )
+                t.expect("Lens failed to resolve. Do you want to use LensExt::get_fallible?")
+                    .clone()
             },
         )
     }
 
-    fn get_fallible(&self, cx: &Context) -> Option<DerefContainer<Self::Target>>
+    fn get_fallible(&self, cx: &Context) -> Option<Self::Target>
     where
         Self::Target: Clone,
     {
         self.view(
             cx.data().expect("Failed to get data from context. Has it been built into the tree?"),
-            |t| t.cloned().map(|v| DerefContainer(v)),
+            |t| t.cloned().map(|v| v),
         )
     }
 
@@ -129,6 +97,13 @@ pub trait LensExt: Lens {
         Self: Lens<Target = Option<T>>,
     {
         self.then(UnwrapLens::new())
+    }
+
+    fn into_lens<T: 'static>(self) -> Then<Self, IntoLens<Self::Target, T>>
+    where
+        Self::Target: Clone + Into<T>,
+    {
+        self.then(IntoLens::new())
     }
 }
 
@@ -309,5 +284,35 @@ impl<T: 'static> Lens for UnwrapLens<T> {
 
     fn view<O, F: FnOnce(Option<&Self::Target>) -> O>(&self, source: &Self::Source, map: F) -> O {
         map(source.as_ref())
+    }
+}
+
+#[derive(Debug)]
+pub struct IntoLens<T, U> {
+    t: PhantomData<T>,
+    u: PhantomData<U>,
+}
+
+impl<T, U> IntoLens<T, U> {
+    pub fn new() -> Self {
+        Self { t: Default::default(), u: Default::default() }
+    }
+}
+
+impl<T, U> Clone for IntoLens<T, U> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<T, U> Copy for IntoLens<T, U> {}
+
+impl<T: 'static + Clone + TryInto<U>, U: 'static> Lens for IntoLens<T, U> {
+    type Source = T;
+    type Target = U;
+
+    fn view<O, F: FnOnce(Option<&Self::Target>) -> O>(&self, source: &Self::Source, map: F) -> O {
+        let converted = source.clone().try_into().ok();
+        map(converted.as_ref())
     }
 }
